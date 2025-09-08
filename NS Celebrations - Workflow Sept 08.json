@@ -57,7 +57,7 @@
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "xxxxxx",
+          "id": "MU9y1vpH1AH4A7qg",
           "name": "OpenAi account"
         }
       }
@@ -117,7 +117,7 @@
       "webhookId": "6f76e2c4-11cd-45e7-b9d7-0917980b76f6",
       "credentials": {
         "slackApi": {
-          "id": "xxxxxxxxxxx",
+          "id": "DkAD3xP0ZzO4XUXz",
           "name": "Slack account"
         }
       }
@@ -137,7 +137,7 @@
       "name": "Select all Contacts with birthdays or work anniversaries",
       "credentials": {
         "salesforceOAuth2Api": {
-          "id": "xxxxxxx",
+          "id": "xVCI1I4zVhoLcPNz",
           "name": "Salesforce account"
         }
       }
@@ -225,7 +225,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Mode: Run Once for Each Item\n\n// ---------- helpers ----------\nconst trimOr = (v, fb = '') => (v ?? '').toString().trim() || fb;\nconst hashSeed = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h); };\n\n// ---------- source from Merge ----------\nconst aiText = trimOr($json.output) || trimOr($json.aiText) || \"We're celebrating you today!\";\nconst rawEvent = trimOr($json.eventTypeForAI) || trimOr($json.Birthday_or_Anniversary_today__c);\n\n// Normalize event label for image text\nlet occLabel;\nswitch (rawEvent) {\n  case 'Anniversary': occLabel = 'Work Anniversary'; break;\n  case 'Both':\n  case 'Birthday and Work Anniversary': occLabel = 'Birthday & Work Anniversary'; break;\n  case 'Work Anniversary': occLabel = 'Work Anniversary'; break;\n  default: occLabel = 'Birthday';\n}\n\n// Name for card/text\nconst displayName =\n  trimOr($json.displayName) ||\n  trimOr($json.Preferred_Name__c) ||\n  [trimOr($json.FirstName), trimOr($json.LastName)].filter(Boolean).join(' ') ||\n  'Friend';\n\n// Mention tag (optional override via channelTag)\nconst rawTag = trimOr($json.channelTag);\nlet tag = '<!channel>';\nif (['<!here>', '<!channel>', '<!everyone>'].includes(rawTag)) tag = rawTag;\n\n// Final mrkdwn text\nconst textWithTag = `${tag}\\n${aiText}`;\n\n// Unique seed per person/event\nconst seedBase = ($json.Id || displayName) + '|' + occLabel;\nconst seed = hashSeed(seedBase);\nconst anniversaryNumber = trimOr($json.yearsSinceHire);\n\n// Prompt for Pollinations\nlet prompt = `${occLabel} card in a modern geometric corporate style, off-white background with large flat shapes in bright red (#EF3E42), navy blue (#0C3C60), golden yellow (#F7B500), and vibrant pink (#F15A9C), festive and professional office celebration decorations, text \"Happy ${occLabel} ${displayName}\"`;\n\nif (occLabel.includes('Work Anniversary')) {\n  // Evita elementos de boda o pastel de cumpleaños en aniversarios laborales\n  prompt += `, professional corporate theme, no birthday cake, no wedding elements, highlight ${anniversaryNumber} as a big number in a geometric style`;\n} else if (occLabel.includes('Birthday')) {\n  prompt += `, include stylized geometric birthday cake with a candle, optional balloons, cheerful but professional look`;\n}\n\n\nconst imageUrl =\n  'https://image.pollinations.ai/prompt/' +\n  encodeURIComponent(prompt) +\n  `?width=1024&height=1024&format=png&seed=${seed}`;\n\n// Slack blocks: text first, image below\nconst blocks = [\n  { type: 'section', text: { type: 'mrkdwn', text: textWithTag } },\n  { type: 'image', image_url: imageUrl, alt_text: `Greeting image for ${displayName}` },\n];\n\n// ---------- output ----------\nreturn {\n  json: {\n    ...$json,\n    occLabel,\n    nameForCard: displayName,\n    aiText: textWithTag,\n    image_url: imageUrl,\n    blocks,\n    notificationText: textWithTag,\n  }\n};"
+        "jsCode": "// Mode: Run Once for Each Item\n\n// ---------- helpers ----------\nconst trimOr = (v, fb = '') => (v ?? '').toString().trim() || fb;\nconst hashSeed = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h); };\n\n// ---------- source from Merge ----------\nconst aiText = trimOr($json.output) || trimOr($json.aiText) || \"We're celebrating you today!\";\nconst rawEvent = trimOr($json.eventTypeForAI) || trimOr($json.Birthday_or_Anniversary_today__c);\n\n// Normalize event label for image text\nlet occLabel;\nswitch (rawEvent) {\n  case 'Anniversary': occLabel = 'Work Anniversary'; break;\n  case 'Both':\n  case 'Birthday and Work Anniversary': occLabel = 'Birthday & Work Anniversary'; break;\n  case 'Work Anniversary': occLabel = 'Work Anniversary'; break;\n  default: occLabel = 'Birthday';\n}\n\n// Name for card/text\nconst displayName =\n  trimOr($json.displayName) ||\n  trimOr($json.Preferred_Name__c) ||\n  [trimOr($json.FirstName), trimOr($json.LastName)].filter(Boolean).join(' ') ||\n  'Friend';\n\n// Mention tag (optional override via channelTag)\nconst rawTag = trimOr($json.channelTag);\nlet tag = '<!channel>';\nif (['<!here>', '<!channel>', '<!everyone>'].includes(rawTag)) tag = rawTag;\n\n// Final mrkdwn text\nconst textWithTag = `${tag}\\n${aiText}`;\n\n// Unique seed per person/event\nconst seedBase = ($json.Id || displayName) + '|' + occLabel;\nconst seed = hashSeed(seedBase);\nconst anniversaryNumber = trimOr($json.yearsSinceHire);\n\n// Prompt for Pollinations\nlet prompt = `${occLabel} card in a modern geometric corporate style, don't use made-up words, off-white background with large flat shapes in bright red (#EF3E42), navy blue (#0C3C60), golden yellow (#F7B500), and vibrant pink (#F15A9C), festive and professional office celebration decorations, text \"Happy ${occLabel} ${displayName}\"`;\n\nif (occLabel.includes('Work Anniversary')) {\n  // Evita elementos de boda o pastel de cumpleaños en aniversarios laborales\n  prompt += `, professional corporate theme, no birthday cake, no wedding elements, highlight ${anniversaryNumber} as a big number in a geometric style`;\n} else if (occLabel.includes('Birthday')) {\n  prompt += `, include stylized geometric birthday cake with a candle, optional balloons, cheerful but professional look`;\n}\n\n\nconst imageUrl =\n  'https://image.pollinations.ai/prompt/' +\n  encodeURIComponent(prompt) +\n  `?width=1024&height=1024&format=png&seed=${seed}`;\n\n// Slack blocks: text first, image below\nconst blocks = [\n  { type: 'section', text: { type: 'mrkdwn', text: textWithTag } },\n  { type: 'image', image_url: imageUrl, alt_text: `Greeting image for ${displayName}` },\n];\n\n// ---------- output ----------\nreturn {\n  json: {\n    ...$json,\n    occLabel,\n    nameForCard: displayName,\n    aiText: textWithTag,\n    image_url: imageUrl,\n    blocks,\n    notificationText: textWithTag,\n  }\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -469,7 +469,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "6bde8fcf-010a-4640-ab4e-0cf9da73163d",
+  "versionId": "b08463dd-721f-4973-9db8-613ff1d6b178",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "431b145273ee691dc0053952459d6333113787c6469711387bc6d58747fa24a3"
