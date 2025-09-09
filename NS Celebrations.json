@@ -1,0 +1,404 @@
+{
+  "name": "NS Celebrations",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2352,
+        248
+      ],
+      "id": "bf3b4858-d723-4676-ad85-739644cfab80",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userPrompt }}",
+        "options": {
+          "systemMessage": "= {{ $json.systemPrompt }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1680,
+        496
+      ],
+      "id": "320907ab-d394-4159-8ea4-dec8f4a0bbf9",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1608,
+        720
+      ],
+      "id": "55ddf74b-b4fc-4df6-9a4e-16c863e2b440",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "xxxxxxx",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -880,
+        372
+      ],
+      "id": "b19e943e-570c-4377-bde8-9ddff470eeae",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09D424PDHA",
+          "mode": "list",
+          "cachedResultName": "hackathon"
+        },
+        "text": "={{$json.slackSummary}}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "sendAsUser": "Celebration Bot"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -1328,
+        80
+      ],
+      "id": "2f7a775c-e36d-460f-b1a5-f33a973230c5",
+      "name": "Today’s Celebrations Summary for HR",
+      "webhookId": "6f76e2c4-11cd-45e7-b9d7-0917980b76f6",
+      "credentials": {
+        "slackApi": {
+          "id": "xxxxxxxxx",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "search",
+        "query": "=SELECT Id,\n       FirstName,\n       LastName,\n       Email,\n       Birthdate,\n       Age__c,\n       Hire_Date__c,\n       Worker_Seniority__c,\n       Title,\n       Active__c,\n       RecordType.DeveloperName,\n       Birthday_or_Anniversary_today__c,\n       Preferred_Name__c,\n       Preferences__c,\n       Preferred_Cake_Flavor__c,\n       Preferred_Pizza_Flavor__c,\n       Sweet_or_salty__c,\n       Allergies_or_food_aversions__c\nFROM Contact\nWHERE RecordType.DeveloperName = 'NS_Employee'\n  AND Active__c = true\n  AND Birthday_or_Anniversary_today__c != 'None'"
+      },
+      "type": "n8n-nodes-base.salesforce",
+      "typeVersion": 1,
+      "position": [
+        -2128,
+        248
+      ],
+      "id": "8f2366ee-5850-4f0c-abab-590272b540c8",
+      "name": "Select all Contacts with birthdays or work anniversaries",
+      "credentials": {
+        "salesforceOAuth2Api": {
+          "id": "xxxxxxxxx",
+          "name": "Salesforce account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const c = item.json;\n\nconst trimOr = (v, fallback = '') => (v ?? '').toString().trim() || fallback;\nconst asNumOrDefault = (v, fallback) => {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : fallback;\n};\n\nconst displayName = trimOr(c.Preferred_Name__c || `${trimOr(c.FirstName)} ${trimOr(c.LastName)}`.trim(), 'Colleague');\nconst eventType   = trimOr(c.eventType || c.Birthday_or_Anniversary_today__c); // 'Birthday' | 'Anniversary' | 'Both'\nconst title       = trimOr(c.Title);\nconst todayYear   = new Date().getFullYear();\n\nconst eventTypeForAI =\n  eventType === 'Anniversary' ? 'Work Anniversary' :\n  eventType === 'Both'        ? 'Birthday and Work Anniversary' :\n                                'Birthday';\n\nlet yearsSinceHire = '';\nif (eventType === 'Anniversary' || eventType === 'Both') {\n  const hireDate = new Date(c.Hire_Date__c);\n  if (!isNaN(hireDate.getTime())) {\n    yearsSinceHire = Math.max(0, todayYear - hireDate.getFullYear()).toString();\n  }\n}\n\n// preferences\nconst cake   = trimOr(c.Preferred_Cake_Flavor__c);\nconst pizza  = trimOr(c.Preferred_Pizza_Flavor__c);\nconst sweet  = trimOr(c.Sweet_or_salty__c);\nconst avoid  = trimOr(c.Allergies_or_food_aversions__c);\n\nconst language      = trimOr(c.language, 'English');\nconst tone          = trimOr(c.tone, 'warm, professional, upbeat');\nconst maxSentences  = asNumOrDefault(c.maxSentences, 3);\nconst emojiMin      = asNumOrDefault(c.emojiMin, 2);\nconst emojiMax      = asNumOrDefault(c.emojiMax, 4);\n\n// sampling/output knobs to map in the OpenAI node\nconst temperature   = asNumOrDefault(c.temperature, 0.9);\nconst top_p         = asNumOrDefault(c.top_p, 0.9);\nconst max_tokens    = asNumOrDefault(c.max_tokens, 220);\n\n// opener/closer pools\nconst openerPool        = trimOr(c.openerPool, 'Celebrating, Wishing, A big shoutout, Let’s celebrate, Sending kudos');\nconst closerPool        = trimOr(c.closerPool, 'We appreciate you, Thanks for all you do, Enjoy your day, Cheers to many more, Keep being awesome');\nconst forbiddenOpeners  = trimOr(c.forbiddenOpeners, 'Happy, Huge congrats');\nconst forbiddenClosers  = trimOr(c.forbiddenClosers, 'Have a great year, Cheers');\n\nconst systemPrompt = `\nYou are a concise copywriter who generates short but rich celebratory Slack messages for teammates.\n\nTone and Style:\n- Tone: ${tone}. Friendly and thoughtful, never cringey, robotic, or overly formal.\n- Language: ${language} with neutral wording for an international audience.\n- Avoid using em dashes (—), which can feel robotic.\n- Write with flow and rhythm. Use connectors (\"and\", \"while\", \"as\", \"with\") to make ideas cohesive.\n- Each sentence should build on the last, not feel like isolated facts.\n- Use contractions (you're, we're, it's) for a natural Slack tone.\n\nStructure:\n- The message must have at least ${maxSentences} meaningful sentences, ideally grouped into 2 short paragraphs.\n- Do not hard line-break after every sentence; let it wrap like a normal Slack post.\n- Visually, it should fill a Slack bubble, not feel sparse.\n- Choose 2–3 relevant details (title, sweet/savory, cake/pizza when allowed) — you don't need to use them all.\n- If Event = Both, celebrate the birthday and the work anniversary in one cohesive message.\n\nFood Rule:\n- If it's a work anniversary (or the anniversary portion of a Both event), do not mention food preferences like cake or pizza. Prefer role, impact, and traits instead.\n- For birthdays, you may include cake or pizza flavors — unless food aversions are listed.\n\nEmoji Policy:\n- Use between ${emojiMin} and ${emojiMax} emojis total (not after every sentence).\n- Choose emojis that fit the context: celebration, gratitude, teamwork, birthdays, or milestones.\n- Examples: 🎉🥳👏💕⭐️😁😌🫶🤩🍰🍕🙌🌟🎂🎁\n- Do not use negative, sarcastic, or unrelated emojis.\n- Variety is encouraged: do not repeat the same emoji every time.\n\nTranslation and Safety:\n- Translate any Spanish words from title, cake, pizza, or sweet/savory into English before using them.\n- If allergies or aversions are provided, completely avoid those foods.\n\nOutput Format:\n- OUTPUT ONLY the final Slack message as plain text (mrkdwn).\n- Do NOT return JSON, brackets, or metadata.\n`.trim();\n\nconst examples = [\n  {\n    role: 'user',\n    content:\n      'Contact: Name=Alex Kim; Event=Birthday; Title=Data Analyst; YearsAtCompany=; FavoriteCake=Red velvet; FavoritePizza=; SweetOrSavory=; AllergiesOrAversions=; ' +\n      'OpenerOptions=Celebrating, Wishing, Sending a big shoutout; CloserOptions=We appreciate you, Enjoy your day; ForbiddenOpeners=Happy; ForbiddenClosers=Cheers'\n  },\n  {\n    role: 'assistant',\n    content:\n      'Sending a big shoutout to Alex Kim on their birthday! 🎉 Enjoy a slice of red velvet as we recognize your impact as our Data Analyst. Enjoy your day.'\n  },\n  {\n    role: 'user',\n    content:\n      'Contact: Name=Jordan Lee; Event=Work Anniversary; Title=Support Lead; YearsAtCompany=3; FavoriteCake=; FavoritePizza=; SweetOrSavory=; AllergiesOrAversions=; ' +\n      'OpenerOptions=Celebrating, Wishing; CloserOptions=Thanks for all you do, Cheers to many more; ForbiddenOpeners=Huge congrats; ForbiddenClosers=Have a great year'\n  },\n  {\n    role: 'assistant',\n    content:\n      'Celebrating Jordan Lee’s work anniversary today! 🥳 Three years of championing customers and mentoring the team reflect your leadership as our Support Lead. Thanks for all you do.'\n  }\n];\n\nconst userPrompt = `\nContact:\n- Name: ${displayName}\n- Event: ${eventTypeForAI}\n- Title/Role: ${title || ''}\n- YearsAtCompany: ${yearsSinceHire}\n- FavoriteCake: ${cake}\n- FavoritePizza: ${pizza}\n- SweetOrSavory: ${sweet}\n- AllergiesOrAversions: ${avoid}\n\nOpenerOptions: ${openerPool}\nForbiddenOpeners: ${forbiddenOpeners}\nCloserOptions: ${closerPool}\nForbiddenClosers: ${forbiddenClosers}\n\nTask:\nCompose a Slack-ready message (mrkdwn). Use one opener and one closer from the options while respecting the forbidden lists. Keep it natural and concise. Do not include private health info. If AllergiesOrAversions is present, simply avoid referencing those foods. For work anniversaries (or the anniversary portion of a Both event), do not mention cake or pizza.\n`.trim();\n\nconst messages = [\n  { role: 'system', content: systemPrompt },\n  ...examples,\n  { role: 'user', content: userPrompt }\n];\n\nconst meta = {\n  contactId: c.Id || c.ContactId || '',\n  email: trimOr(c.Email),\n  eventType,\n  yearsSinceHire,\n  title,\n  language,\n  openerPool,\n  closerPool\n};\n\nreturn {\n  json: {\n    ...c,\n    displayName,\n    eventType,           \n    eventTypeForAI,      \n    title,\n    yearsSinceHire,\n    systemPrompt,\n    userPrompt,\n    messages,\n    temperature,\n    top_p,\n    max_tokens,\n    meta\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1904,
+        248
+      ],
+      "id": "a6c23530-39f6-4989-8aa6-b2696b055fba",
+      "name": "Prepare AI Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const trimOr = (v, fb = '') => (v ?? '').toString().trim() || fb;\n\n// --- date helpers (Monday catch-up) ---\nconst now = new Date();\nconst dow = now.getDay(); // 0=Sun, 1=Mon, ... 6=Sat\nconst mmdd = (d) => `${d.getMonth()+1}-${d.getDate()}`;\n\n// Saturday/Sunday keys when Monday\nlet retroKeys = [];\nif (dow === 1) {\n  const sat = new Date(now); sat.setDate(sat.getDate() - 2);\n  const sun = new Date(now); sun.setDate(sun.getDate() - 1);\n  retroKeys = [mmdd(sat), mmdd(sun)];\n}\n\n// --- buckets ---\nconst groups = {\n  today:   { Birthday: [], Anniversary: [], Both: [] },\n  weekend: { Birthday: [], Anniversary: [], Both: [] }\n};\n\nfunction displayNameFrom(j){\n  return trimOr(j.displayName) ||\n         trimOr(j.Preferred_Name__c) ||\n         [trimOr(j.FirstName), trimOr(j.LastName)].filter(Boolean).join(' ') ||\n         'Colleague';\n}\n\nfunction hintFrom(j, type){\n  const cake   = trimOr(j.Preferred_Cake_Flavor__c);\n  const pizza  = trimOr(j.Preferred_Pizza_Flavor__c);\n  const sweet  = trimOr(j.Sweet_or_salty__c);\n  const allerg = trimOr(j.Allergies_or_food_aversions__c);\n\n  const bits = [];\n  if (sweet)  bits.push(`preference: ${sweet.toLowerCase()}`);\n  if (allerg) bits.push(`allergies/aversions: ${allerg}`);\n  if (type === 'Birthday' || type === 'Both') {\n    if (cake)  bits.push(`cake: ${cake}`);\n    if (pizza) bits.push(`pizza: ${pizza}`);\n  }\n  return bits.length ? ` – ${bits.join(' · ')}` : '';\n}\n\nfunction placeLine(bucket, type, line){\n  if (type === 'Birthday') bucket.Birthday.push(line);\n  else if (type === 'Anniversary') bucket.Anniversary.push(line);\n  else bucket.Both.push(line);\n}\n\nfunction normalizeType(typeRaw){\n  const t = trimOr(typeRaw);\n  if (t === 'Birthday and Work Anniversary' || t === 'Birthday & Work Anniversary') return 'Both';\n  if (t === 'Work Anniversary') return 'Anniversary';\n  return t; // 'Birthday' | 'Anniversary' | 'Both'\n}\n\nconst toDate = (v) => (v instanceof Date ? v : new Date(v));\n\n// --- main loop ---\nfor (const it of items) {\n  const j = it.json || {};\n\n  const type = normalizeType(j.Birthday_or_Anniversary_today__c || j.eventType || j.eventTypeForAI);\n  if (!['Birthday','Anniversary','Both'].includes(type)) continue;\n\n  const name  = displayNameFrom(j);\n  const title = trimOr(j.Title);\n\n  let roleAndYears = '';\n  const yrs = Number(j.yearsSinceHire);\n  if (title && type !== 'Birthday' && Number.isFinite(yrs) && yrs >= 0) {\n    roleAndYears = ` — ${title} (${yrs} ${yrs === 1 ? 'year' : 'years'})`;\n  } else if (title) {\n    roleAndYears = ` — ${title}`;\n  } else if (type !== 'Birthday' && Number.isFinite(yrs) && yrs >= 0) {\n    roleAndYears = ` (${yrs} ${yrs === 1 ? 'year' : 'years'})`;\n  }\n\n  const hint = hintFrom(j, type);\n  const line = `• *${name}*${roleAndYears}${hint}`;\n\n  if (dow === 1) {\n    let isRetro = false;\n    if ((type === 'Birthday' || type === 'Both') && j.Birthdate) {\n      if (retroKeys.includes(mmdd(toDate(j.Birthdate)))) isRetro = true;\n    }\n    if ((type === 'Anniversary' || type === 'Both') && j.Hire_Date__c) {\n      if (retroKeys.includes(mmdd(toDate(j.Hire_Date__c)))) isRetro = true;\n    }\n    if (isRetro) { placeLine(groups.weekend, type, line); continue; }\n  }\n\n  placeLine(groups.today, type, line);\n}\n\n// --- build message ---\nfunction block(label, arr){\n  return arr.length ? `*${label}* (${arr.length})\\n${arr.sort().join('\\n')}` : '';\n}\n\nconst total =\n  groups.today.Birthday.length + groups.today.Anniversary.length + groups.today.Both.length +\n  groups.weekend.Birthday.length + groups.weekend.Anniversary.length + groups.weekend.Both.length;\n\nif (total === 0) return [];\n\nconst todayStr = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });\nconst sWeekend = (dow === 1) ? (\n  [ block('Birthdays', groups.weekend.Birthday),\n    block('Work Anniversaries', groups.weekend.Anniversary),\n    block('Birthday + Work Anniversary', groups.weekend.Both) ]\n  .filter(Boolean).join('\\n\\n')\n) : '';\n\nconst sToday = [ block('Birthdays', groups.today.Birthday),\n                 block('Work Anniversaries', groups.today.Anniversary),\n                 block('Birthday + Work Anniversary', groups.today.Both) ]\n               .filter(Boolean).join('\\n\\n');\n\nconst body = [ sWeekend && `*Weekend catch-up*\\n${sWeekend}`, sToday && `*Today*\\n${sToday}` ]\n             .filter(Boolean).join('\\n\\n');\n\nconst text = `*Celebrations summary – ${todayStr}*\\n${body}\\n\\n:gift: HR: please coordinate presents or gift cards when appropriate.`;\n\nreturn [{ json: { slackSummary: text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        80
+      ],
+      "id": "5d2e3c7f-78fb-4d54-b5b4-98349b759505",
+      "name": "Prepare Summary for HR"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "xoxb-9442107770470-9468953166816-bHDOsA9OE96K0eoMJFhqCU0c"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "all-ns-sf-girls"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.aiText || ' empty' }}"
+            },
+            {
+              "name": "blocks",
+              "value": "={{ $json.blocks }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -640,
+        384
+      ],
+      "id": "ccd75d9c-0232-4a33-8958-6de6463d9980",
+      "name": "POST Slack Message",
+      "credentials": {
+        "slackApi": {
+          "id": "FUbaXUNpOjNEAxc5",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Mode: Run Once for Each Item\n\n// helpers\nconst trimOr = (v, fb = '') => (v ?? '').toString().trim() || fb;\nconst hashSeed = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h); };\nconst clamp = (s, max = 700) => s.replace(/\\s+/g, ' ').slice(0, max);\n\n// consume fields prepared upstream\nconst displayNameRaw = trimOr($json.displayName) ||\n                       trimOr($json.Preferred_Name__c) ||\n                       [trimOr($json.FirstName), trimOr($json.LastName)].filter(Boolean).join(' ') ||\n                       'Friend';\n\n// sanitize + shorten name (avoid weird chars that the model copia/muta)\nconst displayName = displayNameRaw.replace(/[^\\p{L}\\p{N}\\s'.-]/gu, '').replace(/\\s+/g,' ').slice(0, 40);\n\nconst occLabelRaw = trimOr($json.eventTypeForAI, 'Birthday'); // \"Birthday\" | \"Work Anniversary\" | \"Birthday and Work Anniversary\"\nconst occLabel = (occLabelRaw === 'Birthday and Work Anniversary') ? 'Birthday & Work Anniversary' : occLabelRaw;\n\n// ensure anniversary is a clean integer string\nconst annRaw = trimOr($json.yearsSinceHire);\nconst annInt = Number.isInteger(Number(annRaw)) ? parseInt(annRaw, 10) : null;\nconst anniversaryNumber = (annInt !== null && annInt >= 0) ? String(annInt) : '';\n\nconst aiText = trimOr($json.aiText) || trimOr($json.output) || \"We're celebrating you today!\";\nconst rawTag = trimOr($json.channelTag);\nlet tag = '<!channel>';\nif (['<!here>', '<!channel>', '<!everyone>'].includes(rawTag)) tag = rawTag;\n\n// final Slack text (AI message)\nconst textWithTag = `${tag}\\n${aiText}`;\n\n// deterministic seed\nconst seedBase = (trimOr($json.Id) || displayName) + '|' + occLabel;\nconst seed = hashSeed(seedBase);\n\n// ---------- PROMPT (single text block: name + number when applies) ----------\nlet textLine;\nif (occLabel.includes('Work Anniversary')) {\n  textLine = anniversaryNumber\n    ? `Happy Work Anniversary ${displayName} — ${anniversaryNumber} Years`\n    : `Happy Work Anniversary ${displayName}`;\n} else if (occLabel.includes('Birthday & Work Anniversary')) {\n  textLine = anniversaryNumber\n    ? `Happy Birthday & Work Anniversary ${displayName} — ${anniversaryNumber} Years`\n    : `Happy Birthday & Work Anniversary ${displayName}`;\n} else {\n  // Birthday\n  textLine = `Happy Birthday ${displayName}`;\n}\n\nlet prompt =\n  `${occLabel} card in a modern geometric corporate style, ` +\n  `off-white background with large flat shapes in bright red (#EF3E42), navy blue (#0C3C60), ` +\n  `golden yellow (#F7B500), and vibrant pink (#F15A9C), festive and professional office celebration decorations, ` +\n  `text \"${textLine}\"`;\n\nif (occLabel.includes('Work Anniversary')) {\n  prompt += `, professional corporate theme, no birthday cake, no wedding elements`;\n} else if (occLabel.includes('Birthday')) {\n  prompt += `, stylized geometric birthday cake with a candle, optional balloons, cheerful but professional look`;\n}\n\n// keep URL reasonable\nprompt = clamp(prompt, 700);\n\n// Pollinations URL\nconst imageUrl =\n  'https://image.pollinations.ai/prompt/' +\n  encodeURIComponent(prompt) +\n  `?width=1024&height=1024&format=png&seed=${seed}`;\n\n// Blocks: text + ONE image\nconst blocks = [\n  { type: 'section', text: { type: 'mrkdwn', text: textWithTag } },\n  { type: 'image', image_url: imageUrl, alt_text: `Greeting image for ${displayName}` },\n];\n\n// output (no \"text\" field to avoid dup if Slack node uses Blocks)\nreturn {\n  json: {\n    ...$json,\n    occLabel,\n    nameForCard: displayName,\n    aiText: textWithTag,\n    image_url: imageUrl,\n    blocks,\n    notificationText: textWithTag\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        372
+      ],
+      "id": "16d4dd3c-bc36-4ad8-b77d-0981f41da7e7",
+      "name": "Prepare Slack Blocks"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1328,
+        372
+      ],
+      "id": "f39ed94d-6835-4f9f-af2d-248be2554232",
+      "name": "Merge Data"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        384
+      ],
+      "id": "e7106a7e-e979-44aa-abd5-7bc8588f9597",
+      "name": "Wait 10 seconds",
+      "webhookId": "91431d9f-b2c0-485a-bcf0-8e7c8336dfbe"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Select all Contacts with birthdays or work anniversaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "POST Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select all Contacts with birthdays or work anniversaries": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "Prepare Summary for HR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Summary for HR": {
+      "main": [
+        [
+          {
+            "node": "Today’s Celebrations Summary for HR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Slack Blocks": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare Slack Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10 seconds": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Managua",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "899e700e-22a0-46c9-8c9b-e5163f853ba0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b87ca65ca5f7c8d2b7a7ff12bb9b3d998b9bd222067e226563ae0dea15554689"
+  },
+  "id": "LXnNILyZTCemycYx",
+  "tags": []
+}
