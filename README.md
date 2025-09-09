@@ -1,7 +1,7 @@
 # 📘 README
 
 ## Problem 
-The process of generating anniversary and birthday greeting posts is currently done manually. This entire process, including the effective operational time and coordination time, can take up to 5 days. Each week, a summary of upcoming anniversaries and birthdays is sent to the manager from Salesforce. After that, the manager and the designer work together to create the artwork, define the message, and manually publish the posts to the celebrations channel. Automating this process with N8N and an AI node significantly reduces the time and level of supervision needed from the manager, while still fostering a celebratory spirit within the team.
+The process of generating anniversary and birthday greeting posts is currently done manually. This entire process, including the effective operational time and coordination time, can take up to 5 days. Each week, a summary of upcoming anniversaries and birthdays is sent to the manager from Salesforce. After that, the Manager and the Designer work together to create the artwork, define the message, and manually publish the posts to the celebrations channel. Automating this process with N8N and an AI node significantly reduces the time and level of supervision needed from the manager, while still fostering a celebratory spirit within the team.
 - High manual workload and dependency on individuals
 - Lack of timeliness and scalability
 - Inefficient use of creative and managerial resources instead of focusing on higher-impact activities.
