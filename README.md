@@ -1,7 +1,7 @@
 # 📘 README
 
-## Problem  
-Currently, the process of generating anniversary and birthday greeting posts is done manually. Each week, a summary of upcoming anniversaries and birthdays is sent to the manager from Salesforce. Following this, the manager and the designer collaborate to create the artwork, define the message, and manually publish it to the celebrations channel. By automating this process using N8N with an AI node, we can minimize the level of supervision required from the manager, while continuing to promote a celebratory spirit within the team.
+## Problem 
+The process of generating anniversary and birthday greeting posts is currently done manually. This entire process, including the effective operational time and coordination time, can take up to 5 days. Each week, a summary of upcoming anniversaries and birthdays is sent to the manager from Salesforce. After that, the manager and the designer work together to create the artwork, define the message, and manually publish the posts to the celebrations channel. Automating this process with N8N and an AI node significantly reduces the time and level of supervision needed from the manager, while still fostering a celebratory spirit within the team.
 - High manual workload and dependency on individuals
 - Lack of timeliness and scalability
 - Inefficient use of creative and managerial resources instead of focusing on higher-impact activities.
@@ -14,20 +14,17 @@ Currently, the process of generating anniversary and birthday greeting posts is 
 ## Setup  
 1. **Salesforce**:  
    - Node `Select all Contacts with birthdays or work anniversaries`.  
-   - SOQL adjusted to fetch all active employees (no “today” filter).  
+   - SOQL adjusted to fetch all active employees.  
 
 2. **Calendar Filter (Code Node)**:  
-   - Blocks Sat/Sun entirely.  
    - On Monday: emits Sat+Sun (retro) **plus** Monday itself.  
    - On Tue–Fri: emits only “today”.  
-   - Filters anniversaries < 1 year.  
 
 3. **Dual Output**:  
    - **Output A** → `Prepare AI Prompt` → Slack public posts (with Pollinations images).  
    - **Output B** → `Collect for HR` → `Prepare Summary for HR` → Slack HR channel.  
 
 4. **Prepare Slack Blocks**:  
-   - Public post includes *“Weekend catch-up”* prefix if retroactive.  
    - Anniversary posts avoid cake/pizza; birthdays can include.  
    - Images styled with geometric corporate palette.  
 
