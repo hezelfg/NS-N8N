@@ -25,14 +25,13 @@
   - Birthday on Tue → ✅ public post, ✅ HR summary.  
   - Work anniversary on Sat → ❌ no weekend post, ✅ retro on Monday.  
   - Birthday + Anniversary (same day) on Mon → ✅ combined post, ✅ HR summary.  
-  - Anniversary of 0 years → ❌ excluded.  
 - **Edge Cases**:  
   - Multiple employees same day → ✅ grouped correctly in HR summary.  
   - Employees missing Preferred Name → fallback to FirstName LastName.  
 
 ## Cost / Latency Snapshot  
 - **Cost**:  
-  - ~220 tokens / person, 3–4 prompts per day average.  
+  - ~220 tokens/person, 3–4 prompts per day average.  
   - At $0.002 / 1K tokens → negligible (< $0.05/month for ~100 employees).  
 - **Latency**:  
   - Calendar filter + code: <100ms.  
